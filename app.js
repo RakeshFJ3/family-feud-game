@@ -160,8 +160,15 @@ nextQuestionButton.addEventListener('click', () => {
 
 // Reset the game
 resetGameButton.addEventListener('click', () => {
-  if (confirm('Are you sure you want to reset the game?')) {
-    database.ref().set(null);
-    location.reload();
-  }
+    if (confirm('Are you sure you want to reset the game?')) {
+        // Clear the database
+        database.ref().set(null)
+          .then(() => {
+            // Reload the page after resetting the database
+            location.reload();
+          })
+          .catch((error) => {
+            console.error('Error resetting the game:', error);
+          });
+      }
 });

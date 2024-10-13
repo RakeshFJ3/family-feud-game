@@ -31,7 +31,7 @@ joinGameButton.addEventListener('click', () => {
     addPlayer(playerName);
 
     // Check if player is the host
-    if (playerName.toLowerCase() === "rakeshfj3".toLowerCase()) {
+    if (playerName.toLowerCase() === 'rakesh'.toLowerCase()) {
       isHost = true;
       hostControlsDiv.style.display = 'block';
     }

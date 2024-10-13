@@ -52,3 +52,18 @@ body {
     border-radius: 5px;
   }
   
+  .player-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+  }
+  
+  .player-name {
+    font-weight: bold;
+  }
+  
+  .player-score {
+    margin-left: 10px;
+  }
+  
+  

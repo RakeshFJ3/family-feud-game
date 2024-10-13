@@ -7,59 +7,35 @@ const joinGameButton = document.getElementById('join-game');
 const playerSetupDiv = document.getElementById('player-setup');
 const gamePlayDiv = document.getElementById('game-play');
 const playersListDiv = document.getElementById('players-list');
+const hostControlsDiv = document.getElementById('host-controls');
+const questionFileInput = document.getElementById('question-file-input');
+const loadQuestionsButton = document.getElementById('load-questions');
 const questionDiv = document.getElementById('question');
 const answerInput = document.getElementById('answer-input');
 const submitAnswerButton = document.getElementById('submit-answer');
 const answersListDiv = document.getElementById('answers-list');
-const scoresListDiv = document.getElementById('scores-list');
 const nextQuestionButton = document.getElementById('next-question');
 const resetGameButton = document.getElementById('reset-game');
 
 let playerName = '';
+let isHost = false;
 let currentQuestionIndex = 0;
 let playerScores = {};
-
-// Define questions and answers
-const questions = [
-  'Name something you might bring on a camping trip.',
-  'Name a popular pet.',
-  'Name a fruit that is typically red.',
-  'Name something you might see at the beach.'
-];
-
-const answersData = {
-  'Name something you might bring on a camping trip.': {
-    'tent': 30,
-    'sleeping bag': 25,
-    'flashlight': 20,
-    'food': 15,
-    'water': 10
-  },
-  'Name a popular pet.': {
-    'dog': 40,
-    'cat': 35,
-    'fish': 15,
-    'bird': 10
-  },
-  'Name a fruit that is typically red.': {
-    'apple': 40,
-    'strawberry': 30,
-    'cherry': 20,
-    'watermelon': 10
-  },
-  'Name something you might see at the beach.': {
-    'sand': 35,
-    'waves': 30,
-    'seashells': 20,
-    'sunbathers': 15
-  }
-};
+let questions = [];
+let answersData = {};
 
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
   playerName = playerNameInput.value.trim();
   if (playerName) {
     addPlayer(playerName);
+
+    // Check if player is the host
+    if (playerName.toLowerCase() === 'rakeshfj3'.toLowerCase()) {
+      isHost = true;
+      hostControlsDiv.style.display = 'block';
+    }
+
     playerSetupDiv.style.display = 'none';
     gamePlayDiv.style.display = 'block';
     loadQuestion();
@@ -70,22 +46,46 @@ joinGameButton.addEventListener('click', () => {
 
 function addPlayer(name) {
   database.ref('players/' + name).set({
-    name: name
+    name: name,
+    score: 0
   });
 }
 
+// Update players list and scores
 database.ref('players').on('value', (snapshot) => {
   const players = snapshot.val();
   playersListDiv.innerHTML = '<h3>Players:</h3>';
-  for (let key in players) {
-    playersListDiv.innerHTML += `<p>${players[key].name}</p>`;
+  if (players) {
+    for (let key in players) {
+      const player = players[key];
+      playersListDiv.innerHTML += `
+        <div class="player-item">
+          <span class="player-name">${player.name}</span>
+          <span class="player-score">${player.score} pts</span>
+        </div>
+      `;
+    }
+  }
+});
+
+// Load questions from the database
+database.ref('questions').on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    questions = data.questions;
+    answersData = data.answersData;
+    loadQuestion();
   }
 });
 
 // Load and display the current question
 function loadQuestion() {
-  const questionText = questions[currentQuestionIndex];
-  questionDiv.innerHTML = `<h2>${questionText}</h2>`;
+  if (questions.length > 0) {
+    const questionText = questions[currentQuestionIndex];
+    questionDiv.innerHTML = `<h2>${questionText}</h2>`;
+  } else {
+    questionDiv.innerHTML = `<h2>No questions available.</h2>`;
+  }
 }
 
 // Handle answer submission
@@ -108,12 +108,12 @@ function submitAnswer(player, answer) {
     points = correctAnswers[answer];
   }
 
-  // Update player's score
-  if (playerScores[player]) {
-    playerScores[player] += points;
-  } else {
-    playerScores[player] = points;
-  }
+  // Update player's score in the database
+  database.ref('players/' + player).once('value').then((snapshot) => {
+    let currentScore = snapshot.val().score || 0;
+    currentScore += points;
+    database.ref('players/' + player).update({ score: currentScore });
+  });
 
   // Save the answer along with points
   database.ref('answers').push({
@@ -123,34 +123,76 @@ function submitAnswer(player, answer) {
   });
 }
 
-// Display answers and scores in real-time
+// Display answers in real-time
 database.ref('answers').on('value', (snapshot) => {
   const answers = snapshot.val();
   answersListDiv.innerHTML = '<h3>Answers:</h3>';
-  playerScores = {}; // Reset scores
   if (answers) {
     for (let key in answers) {
       const { player, answer, points } = answers[key];
-      answersListDiv.innerHTML += `<p><strong>${player}:</strong> ${answer} (${points} points)</p>`;
-      // Update player scores
-      if (playerScores[player]) {
-        playerScores[player] += points;
-      } else {
-        playerScores[player] = points;
-      }
+      answersListDiv.innerHTML += `<p><strong>${player}:</strong> ${answer} (${points} pts)</p>`;
     }
   }
-  displayScores();
 });
 
-function displayScores() {
-  scoresListDiv.innerHTML = '<h3>Scores:</h3>';
-  for (let player in playerScores) {
-    scoresListDiv.innerHTML += `<p>${player}: ${playerScores[player]} points</p>`;
+// Host: Load questions from uploaded file
+loadQuestionsButton.addEventListener('click', () => {
+  const file = questionFileInput.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      parseQuestionsFile(e.target.result);
+    };
+    reader.readAsText(file);
+  } else {
+    alert('Please select a file.');
   }
+});
+
+// Parse the uploaded questions file
+function parseQuestionsFile(fileContent) {
+  questions = [];
+  answersData = {};
+  const lines = fileContent.split('\n');
+  let currentQuestion = '';
+  let currentAnswers = {};
+  lines.forEach((line) => {
+    line = line.trim();
+    if (line === '') {
+      // Empty line indicates end of answers for a question
+      if (currentQuestion) {
+        questions.push(currentQuestion);
+        answersData[currentQuestion] = currentAnswers;
+        currentQuestion = '';
+        currentAnswers = {};
+      }
+    } else if (!currentQuestion) {
+      // The line is a question
+      currentQuestion = line;
+    } else {
+      // The line is an answer with popularity
+      const match = line.match(/^(.+)\((\d+)\)$/);
+      if (match) {
+        const answerText = match[1].trim().toLowerCase();
+        const popularity = parseInt(match[2]);
+        currentAnswers[answerText] = popularity;
+      }
+    }
+  });
+  // Save the last question and answers if file doesn't end with an empty line
+  if (currentQuestion) {
+    questions.push(currentQuestion);
+    answersData[currentQuestion] = currentAnswers;
+  }
+  // Save questions and answers to the database
+  database.ref('questions').set({
+    questions: questions,
+    answersData: answersData
+  });
+  alert('Questions loaded successfully!');
 }
 
-// Proceed to next question
+// Host: Proceed to next question
 nextQuestionButton.addEventListener('click', () => {
   currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
   loadQuestion();
@@ -158,17 +200,11 @@ nextQuestionButton.addEventListener('click', () => {
   database.ref('answers').remove();
 });
 
-// Reset the game
+// Host: Reset the game
 resetGameButton.addEventListener('click', () => {
-    if (confirm('Are you sure you want to reset the game?')) {
-        // Clear the database
-        database.ref().set(null)
-          .then(() => {
-            // Reload the page after resetting the database
-            location.reload();
-          })
-          .catch((error) => {
-            console.error('Error resetting the game:', error);
-          });
-      }
+  if (confirm('Are you sure you want to reset the game?')) {
+    database.ref().set(null);
+    location.reload();
+  }
 });
+

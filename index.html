@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Family Feud Game</title>
+  <!-- Link to your CSS file -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Family Feud Game</h1>
+  <div id="game">
+    <!-- Player setup -->
+    <div id="player-setup">
+      <label for="player-name">Enter your name:</label>
+      <input type="text" id="player-name" required>
+      <button id="join-game">Join Game</button>
+    </div>
+
+    <!-- Game play area -->
+    <div id="game-play" style="display: none;">
+      <div id="players-list"></div>
+      <div id="question"></div>
+      <input type="text" id="answer-input" placeholder="Your answer">
+      <button id="submit-answer">Submit Answer</button>
+      <div id="answers-list"></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <!-- Include Firebase libraries from their CDN -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Initialize Firebase -->
+  <script>
+    // Your web app's Firebase configuration
+    var firebaseConfig = {
+      apiKey: "AIzaSyBf7wOHElMbU3sJ6eMwFPEmbqpuFgQZhkI",
+      authDomain: "family-feud-game.firebaseapp.com",
+      databaseURL: "https://family-feud-game-default-rtdb.firebaseio.com/",
+      projectId: "family-feud-game",
+      storageBucket: "family-feud-game.appspot.com",
+      messagingSenderId: "938536548435",
+      appId: "1:938536548435:web:33c00bc960d00f5bec6ea6"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
+
+  <!-- Link to your JavaScript file -->
+  <script src="app.js"></script>
+</body>
+</html>

@@ -26,7 +26,6 @@ let questions = [];
 let answersData = {};
 let currentQuestion = '';
 let revealedAnswers = false;
-let questionsLoaded = false;
 
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
@@ -61,32 +60,37 @@ function addPlayer(name) {
 }
 
 function setupGameListeners() {
+  console.log(`${playerName} is setting up game listeners`);
+
   // Load questions from the database
-  database.ref('questions').once('value').then((snapshot) => {
+  database.ref('questions').on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
       questions = data.questions;
       answersData = data.answersData;
-      questionsLoaded = true;
+      console.log(`${playerName} loaded questions`);
 
       // Now that questions are loaded, set up the currentQuestionIndex listener
       database.ref('currentQuestionIndex').on('value', (snapshot) => {
         const index = snapshot.val();
+        console.log(`${playerName} received currentQuestionIndex: ${index}`);
         if (index !== null && questions.length > 0) {
           currentQuestion = questions[index];
           loadQuestion();
+        } else {
+          questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
         }
       });
     } else {
-      console.log('No questions found in database');
+      console.log(`${playerName}: No questions found in database`);
+      questionDiv.innerHTML = `<h2>No questions available.</h2>`;
     }
-  }).catch((error) => {
-    console.error('Error loading questions:', error);
   });
 
   // Listen for reveal answers event
   database.ref('revealedAnswers').on('value', (snapshot) => {
     revealedAnswers = snapshot.val();
+    console.log(`${playerName} received revealedAnswers: ${revealedAnswers}`);
     if (revealedAnswers && currentQuestion) {
       displayRevealedAnswers();
     } else {
@@ -96,6 +100,7 @@ function setupGameListeners() {
 
   // Display answers in real-time
   database.ref('answers').on('value', (snapshot) => {
+    console.log(`${playerName} received answers update`);
     const answers = snapshot.val();
     answersListDiv.innerHTML = '<h3>Answers:</h3>';
     if (answers) {
@@ -108,6 +113,7 @@ function setupGameListeners() {
 
   // Update players list and scores
   database.ref('players').on('value', (snapshot) => {
+    console.log(`${playerName} received players update`);
     const players = snapshot.val();
     playersListDiv.innerHTML = '<h3>Players:</h3>';
     if (players) {
@@ -132,7 +138,7 @@ function loadQuestion() {
     revealedAnswersDiv.style.display = 'none';
     revealedAnswers = false;
   } else {
-    questionDiv.innerHTML = `<h2>No questions available.</h2>`;
+    questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
   }
 }
 

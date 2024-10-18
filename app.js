@@ -163,26 +163,33 @@ function parseQuestionsFile(fileContent) {
   lines.forEach((line) => {
     line = line.trim();
     if (line === '') {
-      // Empty line indicates end of answers for a question
-      if (currentQuestion) {
-        questions.push(currentQuestion);
-        answersData[currentQuestion] = currentAnswers;
-        currentQuestion = '';
-        currentAnswers = {};
+        // Empty line indicates end of answers for a question
+        if (currentQuestion) {
+          questions.push(currentQuestion);
+          answersData[currentQuestion] = currentAnswers;
+          currentQuestion = '';
+          currentAnswers = {};
+        }
+      } else if (/^\d+\.\s+/.test(line)) {
+        // Line starts with a number and a dot (e.g., "111. ")
+        if (currentQuestion) {
+          // Save previous question and answers before starting a new one
+          questions.push(currentQuestion);
+          answersData[currentQuestion] = currentAnswers;
+          currentAnswers = {};
+        }
+        // Extract the question text
+        currentQuestion = line.replace(/^\d+\.\s+/, '').trim();
+      } else {
+        // Line is an answer with points in the format "Answer (X points)"
+        const match = line.match(/^(.+)\((\d+)\s*points\)$/i);
+        if (match) {
+          const answerText = match[1].trim().toLowerCase();
+          const popularity = parseInt(match[2]);
+          currentAnswers[answerText] = popularity;
+        }
       }
-    } else if (!currentQuestion) {
-      // The line is a question
-      currentQuestion = line;
-    } else {
-      // The line is an answer with popularity
-      const match = line.match(/^(.+)\((\d+)\)$/);
-      if (match) {
-        const answerText = match[1].trim().toLowerCase();
-        const popularity = parseInt(match[2]);
-        currentAnswers[answerText] = popularity;
-      }
-    }
-  });
+    });
   // Save the last question and answers if file doesn't end with an empty line
   if (currentQuestion) {
     questions.push(currentQuestion);

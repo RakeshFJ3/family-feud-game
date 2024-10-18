@@ -14,10 +14,10 @@ const questionDiv = document.getElementById('question');
 const answerInput = document.getElementById('answer-input');
 const submitAnswerButton = document.getElementById('submit-answer');
 const answersListDiv = document.getElementById('answers-list');
-const revealedAnswersDiv = document.getElementById('revealed-answers');
 const nextQuestionButton = document.getElementById('next-question');
 const resetGameButton = document.getElementById('reset-game');
 const revealAnswersButton = document.getElementById('reveal-answers');
+const revealedAnswersDiv = document.getElementById('revealed-answers');
 
 let playerName = '';
 let isHost = false;
@@ -34,9 +34,12 @@ joinGameButton.addEventListener('click', () => {
     addPlayer(playerName);
 
     // Check if player is the host
-    if (playerName.trim().toLowerCase() === "rakesh".toLowerCase()) {
+    if (playerName.toLowerCase() === 'rakesh'.toLowerCase()) {
       isHost = true;
       hostControlsDiv.style.display = 'block';
+      console.log('Host recognized:', playerName);
+    } else {
+      console.log('Player joined:', playerName);
     }
 
     playerSetupDiv.style.display = 'none';

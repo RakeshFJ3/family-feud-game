@@ -66,4 +66,8 @@ body {
     margin-left: 10px;
   }
   
-  
+  #revealed-answers p {
+    background-color: #ffeb3b;
+    padding: 10px;
+    border-radius: 5px;
+  }

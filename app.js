@@ -14,15 +14,18 @@ const questionDiv = document.getElementById('question');
 const answerInput = document.getElementById('answer-input');
 const submitAnswerButton = document.getElementById('submit-answer');
 const answersListDiv = document.getElementById('answers-list');
+const revealedAnswersDiv = document.getElementById('revealed-answers');
 const nextQuestionButton = document.getElementById('next-question');
 const resetGameButton = document.getElementById('reset-game');
+const revealAnswersButton = document.getElementById('reveal-answers');
 
 let playerName = '';
 let isHost = false;
-let currentQuestionIndex = 0;
 let playerScores = {};
 let questions = [];
 let answersData = {};
+let currentQuestion = '';
+let revealedAnswers = false;
 
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
@@ -31,18 +34,13 @@ joinGameButton.addEventListener('click', () => {
     addPlayer(playerName);
 
     // Check if player is the host
-    if (playerName.toLowerCase() === 'rakesh'.toLowerCase()) {
+    if (playerName.trim().toLowerCase() === 'your-host-name'.toLowerCase()) {
       isHost = true;
       hostControlsDiv.style.display = 'block';
-      console.log('Host recognized:', playerName);
-} else {
-  console.log('Player joined:', playerName);
-}
-    
+    }
 
     playerSetupDiv.style.display = 'none';
     gamePlayDiv.style.display = 'block';
-    loadQuestion();
   } else {
     alert('Please enter your name.');
   }
@@ -78,15 +76,36 @@ database.ref('questions').on('value', (snapshot) => {
   if (data) {
     questions = data.questions;
     answersData = data.answersData;
+  }
+});
+
+// Listen for changes to the current question index
+database.ref('currentQuestionIndex').on('value', (snapshot) => {
+  const index = snapshot.val();
+  if (index !== null && questions.length > 0) {
+    currentQuestion = questions[index];
     loadQuestion();
+  }
+});
+
+// Listen for reveal answers event
+database.ref('revealedAnswers').on('value', (snapshot) => {
+  revealedAnswers = snapshot.val();
+  if (revealedAnswers && currentQuestion) {
+    displayRevealedAnswers();
+  } else {
+    revealedAnswersDiv.style.display = 'none';
   }
 });
 
 // Load and display the current question
 function loadQuestion() {
-  if (questions.length > 0) {
-    const questionText = questions[currentQuestionIndex];
-    questionDiv.innerHTML = `<h2>${questionText}</h2>`;
+  if (currentQuestion) {
+    questionDiv.innerHTML = `<h2>${currentQuestion}</h2>`;
+    // Clear previous answers
+    answersListDiv.innerHTML = '<h3>Answers:</h3>';
+    revealedAnswersDiv.style.display = 'none';
+    revealedAnswers = false;
   } else {
     questionDiv.innerHTML = `<h2>No questions available.</h2>`;
   }
@@ -104,7 +123,6 @@ submitAnswerButton.addEventListener('click', () => {
 });
 
 function submitAnswer(player, answer) {
-  const currentQuestion = questions[currentQuestionIndex];
   const correctAnswers = answersData[currentQuestion];
 
   let points = 0;
@@ -158,64 +176,99 @@ function parseQuestionsFile(fileContent) {
   questions = [];
   answersData = {};
   const lines = fileContent.split('\n');
-  let currentQuestion = '';
+  let currentQuestionText = '';
   let currentAnswers = {};
   lines.forEach((line) => {
     line = line.trim();
     if (line === '') {
-        // Empty line indicates end of answers for a question
-        if (currentQuestion) {
-          questions.push(currentQuestion);
-          answersData[currentQuestion] = currentAnswers;
-          currentQuestion = '';
-          currentAnswers = {};
-        }
-      } else if (/^\d+\.\s+/.test(line)) {
-        // Line starts with a number and a dot (e.g., "111. ")
-        if (currentQuestion) {
-          // Save previous question and answers before starting a new one
-          questions.push(currentQuestion);
-          answersData[currentQuestion] = currentAnswers;
-          currentAnswers = {};
-        }
-        // Extract the question text
-        currentQuestion = line.replace(/^\d+\.\s+/, '').trim();
-      } else {
-        // Line is an answer with points in the format "Answer (X points)"
-        const match = line.match(/^(.+)\((\d+)\s*points\)$/i);
-        if (match) {
-          const answerText = match[1].trim().toLowerCase();
-          const popularity = parseInt(match[2]);
-          currentAnswers[answerText] = popularity;
-        }
+      // Empty line indicates end of answers for a question
+      if (currentQuestionText) {
+        questions.push(currentQuestionText);
+        answersData[currentQuestionText] = currentAnswers;
+        currentQuestionText = '';
+        currentAnswers = {};
       }
-    });
+    } else if (/^\d+\.\s+/.test(line)) {
+      // Line starts with a number and a dot (e.g., "111. ")
+      if (currentQuestionText) {
+        // Save previous question and answers before starting a new one
+        questions.push(currentQuestionText);
+        answersData[currentQuestionText] = currentAnswers;
+        currentAnswers = {};
+      }
+      // Extract the question text
+      currentQuestionText = line.replace(/^\d+\.\s+/, '').trim();
+    } else {
+      // Line is an answer with points in the format "Answer (X points)"
+      const match = line.match(/^(.+)\((\d+)\s*points?\)$/i);
+      if (match) {
+        const answerText = match[1].trim().toLowerCase();
+        const popularity = parseInt(match[2]);
+        currentAnswers[answerText] = popularity;
+      }
+    }
+  });
   // Save the last question and answers if file doesn't end with an empty line
-  if (currentQuestion) {
-    questions.push(currentQuestion);
-    answersData[currentQuestion] = currentAnswers;
+  if (currentQuestionText) {
+    questions.push(currentQuestionText);
+    answersData[currentQuestionText] = currentAnswers;
   }
+  // Randomize question order
+  shuffleArray(questions);
+
   // Save questions and answers to the database
   database.ref('questions').set({
     questions: questions,
     answersData: answersData
+  }).then(() => {
+    // Reset current question index to -1 to start from the first question when "Next Question" is clicked
+    database.ref('currentQuestionIndex').set(-1);
+    alert('Questions loaded successfully!');
   });
-  alert('Questions loaded successfully!');
+}
+
+// Shuffle array function
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
 }
 
 // Host: Proceed to next question
 nextQuestionButton.addEventListener('click', () => {
-  currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
-  loadQuestion();
-  // Clear previous answers
-  database.ref('answers').remove();
+  database.ref('currentQuestionIndex').once('value').then((snapshot) => {
+    let index = snapshot.val();
+    index = (index + 1) % questions.length;
+    database.ref('currentQuestionIndex').set(index);
+    // Clear previous answers
+    database.ref('answers').remove();
+    // Hide revealed answers
+    database.ref('revealedAnswers').set(false);
+  });
 });
+
+// Host: Reveal answers
+revealAnswersButton.addEventListener('click', () => {
+  database.ref('revealedAnswers').set(true);
+});
+
+// Display revealed answers
+function displayRevealedAnswers() {
+  revealedAnswersDiv.style.display = 'block';
+  revealedAnswersDiv.innerHTML = '<h3>Correct Answers:</h3>';
+  const correctAnswers = answersData[currentQuestion];
+  for (let answer in correctAnswers) {
+    const points = correctAnswers[answer];
+    revealedAnswersDiv.innerHTML += `<p>${answer} (${points} pts)</p>`;
+  }
+}
 
 // Host: Reset the game
 resetGameButton.addEventListener('click', () => {
   if (confirm('Are you sure you want to reset the game?')) {
-    database.ref().set(null);
-    location.reload();
+    database.ref().set(null).then(() => {
+      location.reload();
+    });
   }
 });
-

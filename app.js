@@ -26,6 +26,7 @@ let questions = [];
 let answersData = {};
 let currentQuestion = '';
 let revealedAnswers = false;
+let questionsLoaded = false;
 
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
@@ -44,6 +45,9 @@ joinGameButton.addEventListener('click', () => {
 
     playerSetupDiv.style.display = 'none';
     gamePlayDiv.style.display = 'block';
+
+    // Load questions and set up listeners
+    setupGameListeners();
   } else {
     alert('Please enter your name.');
   }
@@ -56,52 +60,70 @@ function addPlayer(name) {
   });
 }
 
-// Update players list and scores
-database.ref('players').on('value', (snapshot) => {
-  const players = snapshot.val();
-  playersListDiv.innerHTML = '<h3>Players:</h3>';
-  if (players) {
-    for (let key in players) {
-      const player = players[key];
-      playersListDiv.innerHTML += `
-        <div class="player-item">
-          <span class="player-name">${player.name}</span>
-          <span class="player-score">${player.score} pts</span>
-        </div>
-      `;
+function setupGameListeners() {
+  // Load questions from the database
+  database.ref('questions').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      questions = data.questions;
+      answersData = data.answersData;
+      questionsLoaded = true;
+
+      // Now that questions are loaded, set up the currentQuestionIndex listener
+      database.ref('currentQuestionIndex').on('value', (snapshot) => {
+        const index = snapshot.val();
+        if (index !== null && questions.length > 0) {
+          currentQuestion = questions[index];
+          loadQuestion();
+        }
+      });
+    } else {
+      console.log('No questions found in database');
     }
-  }
-});
+  }).catch((error) => {
+    console.error('Error loading questions:', error);
+  });
 
-// Load questions from the database
-database.ref('questions').on('value', (snapshot) => {
-  const data = snapshot.val();
-  if (data) {
-    questions = data.questions;
-    answersData = data.answersData;
-  }
-});
+  // Listen for reveal answers event
+  database.ref('revealedAnswers').on('value', (snapshot) => {
+    revealedAnswers = snapshot.val();
+    if (revealedAnswers && currentQuestion) {
+      displayRevealedAnswers();
+    } else {
+      revealedAnswersDiv.style.display = 'none';
+    }
+  });
 
-// Listen for changes to the current question index
-database.ref('currentQuestionIndex').on('value', (snapshot) => {
-  const index = snapshot.val();
-  if (index !== null && questions.length > 0) {
-    currentQuestion = questions[index];
-    loadQuestion();
-  }
-});
+  // Display answers in real-time
+  database.ref('answers').on('value', (snapshot) => {
+    const answers = snapshot.val();
+    answersListDiv.innerHTML = '<h3>Answers:</h3>';
+    if (answers) {
+      for (let key in answers) {
+        const { player, answer, points } = answers[key];
+        answersListDiv.innerHTML += `<p><strong>${player}:</strong> ${answer} (${points} pts)</p>`;
+      }
+    }
+  });
 
-// Listen for reveal answers event
-database.ref('revealedAnswers').on('value', (snapshot) => {
-  revealedAnswers = snapshot.val();
-  if (revealedAnswers && currentQuestion) {
-    displayRevealedAnswers();
-  } else {
-    revealedAnswersDiv.style.display = 'none';
-  }
-});
+  // Update players list and scores
+  database.ref('players').on('value', (snapshot) => {
+    const players = snapshot.val();
+    playersListDiv.innerHTML = '<h3>Players:</h3>';
+    if (players) {
+      for (let key in players) {
+        const player = players[key];
+        playersListDiv.innerHTML += `
+          <div class="player-item">
+            <span class="player-name">${player.name}</span>
+            <span class="player-score">${player.score} pts</span>
+          </div>
+        `;
+      }
+    }
+  });
+}
 
-// Load and display the current question
 function loadQuestion() {
   if (currentQuestion) {
     questionDiv.innerHTML = `<h2>${currentQuestion}</h2>`;
@@ -147,18 +169,6 @@ function submitAnswer(player, answer) {
     points: points
   });
 }
-
-// Display answers in real-time
-database.ref('answers').on('value', (snapshot) => {
-  const answers = snapshot.val();
-  answersListDiv.innerHTML = '<h3>Answers:</h3>';
-  if (answers) {
-    for (let key in answers) {
-      const { player, answer, points } = answers[key];
-      answersListDiv.innerHTML += `<p><strong>${player}:</strong> ${answer} (${points} pts)</p>`;
-    }
-  }
-});
 
 // Host: Load questions from uploaded file
 loadQuestionsButton.addEventListener('click', () => {
@@ -275,3 +285,4 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
+

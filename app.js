@@ -62,32 +62,32 @@ function addPlayer(name) {
 function setupGameListeners() {
   console.log(`${playerName} is setting up game listeners`);
 
-  // Load questions from the database
-  database.ref('questions').once('value').then((snapshot) => {
+  // Listen for changes to the 'questions' node
+  database.ref('questions').on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
       questions = data.questions;
       answersData = data.answersData;
       console.log(`${playerName} loaded questions`);
-
-      // Now that questions are loaded, set up the currentQuestionIndex listener
-      database.ref('currentQuestionIndex').on('value', (snapshot) => {
-        const index = snapshot.val();
-        console.log(`${playerName} received currentQuestionIndex: ${index}`);
-        if (index !== null && questions.length > 0) {
-          currentQuestionID = questions[index].id;
-          currentQuestion = questions[index].text;
-          loadQuestion();
-        } else {
-          questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
-        }
-      });
     } else {
       console.log(`${playerName}: No questions found in database`);
       questionDiv.innerHTML = `<h2>No questions available.</h2>`;
     }
-  }).catch((error) => {
+  }, (error) => {
     console.error(`${playerName}: Error loading questions:`, error);
+  });
+
+  // Listen for changes to currentQuestionIndex
+  database.ref('currentQuestionIndex').on('value', (snapshot) => {
+    const index = snapshot.val();
+    console.log(`${playerName} received currentQuestionIndex: ${index}`);
+    if (index !== null && questions.length > 0) {
+      currentQuestionID = questions[index].id;
+      currentQuestion = questions[index].text;
+      loadQuestion();
+    } else {
+      questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
+    }
   });
 
   // Listen for reveal answers event
@@ -313,5 +313,3 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
-
-

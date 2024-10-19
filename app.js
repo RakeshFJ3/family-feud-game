@@ -26,6 +26,7 @@ let answersData = {};
 let currentQuestion = '';
 let currentQuestionID = '';
 let revealedAnswers = false;
+let questionsLoaded = false;
 
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
@@ -68,7 +69,17 @@ function setupGameListeners() {
     if (data) {
       questions = data.questions;
       answersData = data.answersData;
+      questionsLoaded = true;
       console.log(`${playerName} loaded questions`);
+      // Load the current question if currentQuestionIndex is set
+      database.ref('currentQuestionIndex').once('value').then((snapshot) => {
+        const index = snapshot.val();
+        if (index !== null && questions.length > 0) {
+          currentQuestionID = questions[index].id;
+          currentQuestion = questions[index].text;
+          loadQuestion();
+        }
+      });
     } else {
       console.log(`${playerName}: No questions found in database`);
       questionDiv.innerHTML = `<h2>No questions available.</h2>`;
@@ -81,7 +92,7 @@ function setupGameListeners() {
   database.ref('currentQuestionIndex').on('value', (snapshot) => {
     const index = snapshot.val();
     console.log(`${playerName} received currentQuestionIndex: ${index}`);
-    if (index !== null && questions.length > 0) {
+    if (index !== null && questionsLoaded && questions.length > 0) {
       currentQuestionID = questions[index].id;
       currentQuestion = questions[index].text;
       loadQuestion();

@@ -74,7 +74,7 @@ function setupGameListeners() {
       // Load the current question if currentQuestionIndex is set
       database.ref('currentQuestionIndex').once('value').then((snapshot) => {
         const index = snapshot.val();
-        if (index !== null && questions.length > 0) {
+        if (index !== null && index >= 0 && questions.length > 0) {
           currentQuestionID = questions[index].id;
           currentQuestion = questions[index].text;
           loadQuestion();
@@ -92,7 +92,7 @@ function setupGameListeners() {
   database.ref('currentQuestionIndex').on('value', (snapshot) => {
     const index = snapshot.val();
     console.log(`${playerName} received currentQuestionIndex: ${index}`);
-    if (index !== null && questionsLoaded && questions.length > 0) {
+    if (index !== null && index >= 0 && questionsLoaded && questions.length > 0) {
       currentQuestionID = questions[index].id;
       currentQuestion = questions[index].text;
       loadQuestion();
@@ -324,3 +324,4 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
+

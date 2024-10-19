@@ -62,7 +62,7 @@ function addPlayer(name) {
 function setupGameListeners() {
   console.log(`${playerName} is setting up game listeners`);
 
-  // Load questions from the database
+  // Listen for questions data
   database.ref('questions').on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
@@ -70,20 +70,23 @@ function setupGameListeners() {
       answersData = data.answersData;
       console.log(`${playerName} loaded questions`);
 
-      // Now that questions are loaded, set up the currentQuestionIndex listener
-      database.ref('currentQuestionIndex').on('value', (snapshot) => {
-        const index = snapshot.val();
-        console.log(`${playerName} received currentQuestionIndex: ${index}`);
-        if (index !== null && questions.length > 0) {
-          currentQuestion = questions[index];
-          loadQuestion();
-        } else {
-          questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
-        }
-      });
+      // Now that questions are loaded, update the current question
+      updateCurrentQuestion();
     } else {
       console.log(`${playerName}: No questions found in database`);
       questionDiv.innerHTML = `<h2>No questions available.</h2>`;
+    }
+  });
+
+  // Listen for changes to currentQuestionIndex
+  database.ref('currentQuestionIndex').on('value', (snapshot) => {
+    const index = snapshot.val();
+    console.log(`${playerName} received currentQuestionIndex: ${index}`);
+    if (index !== null && questions.length > 0) {
+      currentQuestion = questions[index];
+      loadQuestion();
+    } else {
+      questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
     }
   });
 
@@ -126,6 +129,19 @@ function setupGameListeners() {
           </div>
         `;
       }
+    }
+  });
+}
+
+function updateCurrentQuestion() {
+  database.ref('currentQuestionIndex').once('value').then((snapshot) => {
+    const index = snapshot.val();
+    console.log(`${playerName} updating current question with index: ${index}`);
+    if (index !== null && questions.length > 0) {
+      currentQuestion = questions[index];
+      loadQuestion();
+    } else {
+      questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
     }
   });
 }
@@ -258,7 +274,11 @@ function shuffleArray(array) {
 nextQuestionButton.addEventListener('click', () => {
   database.ref('currentQuestionIndex').once('value').then((snapshot) => {
     let index = snapshot.val();
-    index = (index + 1) % questions.length;
+    if (index === null || index === undefined) {
+      index = 0;
+    } else {
+      index = (index + 1) % questions.length;
+    }
     database.ref('currentQuestionIndex').set(index);
     // Clear previous answers
     database.ref('answers').remove();
@@ -291,4 +311,5 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
+
 

@@ -1,73 +1,96 @@
+/* General Styles */
 body {
     font-family: Arial, sans-serif;
-    text-align: center;
-    background-color: #f0f8ff;
-  }
-  
-  #game {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  h1 {
-    color: #333;
+    margin: 0;
+    padding: 0;
   }
   
   #player-setup, #game-play {
+    text-align: center;
+    margin-top: 50px;
+  }
+  
+  #answer-input {
+    width: 200px;
+  }
+  
+  #answers-list, #revealed-answers {
     margin-top: 20px;
   }
   
-  label {
-    font-size: 1.2em;
-  }
-  
-  input[type="text"] {
-    padding: 8px;
-    font-size: 1em;
-    width: 80%;
-    margin-top: 10px;
-  }
-  
-  button {
-    padding: 10px 20px;
-    font-size: 1em;
-    margin-top: 10px;
-    cursor: pointer;
-  }
-  
-  #players-list, #answers-list {
-    text-align: left;
-    margin: 20px 0;
-  }
-  
-  #question {
-    font-size: 1.5em;
-    margin: 20px 0;
-  }
-  
-  #answers-list p {
-    background-color: #e0f7fa;
+  /* Top Bar Styles */
+  #top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     padding: 10px;
-    border-radius: 5px;
+  }
+  
+  #players-list {
+    text-align: left;
+    margin-left: 20px;
+  }
+  
+  #players-list h3 {
+    margin-top: 0;
   }
   
   .player-item {
     display: flex;
     justify-content: space-between;
-    padding: 5px 0;
+    width: 150px;
   }
   
-  .player-name {
+  #secondary-host-controls {
+    text-align: right;
+    margin-right: 20px;
+  }
+  
+  /* Main Host Controls */
+  #main-host-controls {
+    margin-top: 20px;
+  }
+  
+  #main-host-controls button {
+    margin: 5px;
+  }
+  
+  /* Question Styles */
+  #question {
+    margin-top: 20px;
+    font-size: 24px;
     font-weight: bold;
   }
   
-  .player-score {
-    margin-left: 10px;
+  /* Answer Styles */
+  .answer-correct {
+    background-color: lightgreen;
   }
   
-  #revealed-answers p {
-    background-color: #ffeb3b;
-    padding: 10px;
-    border-radius: 5px;
+  .answer-duplicate {
+    background-color: lightcoral;
   }
+  
+  .answer-incorrect {
+    background-color: transparent;
+  }
+  
+  /* Answer List Styles */
+  #answers-list p {
+    padding: 5px;
+  }
+  
+  #answers-list h3 {
+    margin-top: 20px;
+  }
+  
+  /* Revealed Answers Styles */
+  #revealed-answers {
+    margin-top: 20px;
+  }
+  
+  /* Answer Section Styles */
+  #answer-section {
+    margin-top: 20px;
+  }
+  

@@ -18,6 +18,8 @@ const nextQuestionButton = document.getElementById('next-question');
 const resetGameButton = document.getElementById('reset-game');
 const revealAnswersButton = document.getElementById('reveal-answers');
 const revealedAnswersDiv = document.getElementById('revealed-answers');
+const mainHostControlsDiv = document.getElementById('main-host-controls');
+const secondaryHostControlsDiv = document.getElementById('secondary-host-controls');
 
 let playerName = '';
 let isHost = false;
@@ -37,7 +39,8 @@ joinGameButton.addEventListener('click', () => {
     // Check if player is the host
     if (playerName.toLowerCase() === 'rakesh'.toLowerCase()) {
       isHost = true;
-      hostControlsDiv.style.display = 'block';
+      mainHostControlsDiv.style.display = 'block';
+      secondaryHostControlsDiv.style.display = 'block';
       console.log('Host recognized:', playerName);
     } else {
       console.log('Player joined:', playerName);
@@ -62,6 +65,16 @@ function addPlayer(name) {
 
 function setupGameListeners() {
   console.log(`${playerName} is setting up game listeners`);
+
+  // Listen for game reset
+  database.ref('gameReset').on('value', (snapshot) => {
+    const reset = snapshot.val();
+    if (reset) {
+      // Reset local state and go back to player setup screen
+      alert('The game has been reset by the host.');
+      location.reload();
+    }
+  });
 
   // Listen for changes to the 'questions' node
   database.ref('questions').on('value', (snapshot) => {
@@ -119,8 +132,16 @@ function setupGameListeners() {
     answersListDiv.innerHTML = '<h3>Answers:</h3>';
     if (answers) {
       for (let key in answers) {
-        const { player, answer, points } = answers[key];
-        answersListDiv.innerHTML += `<p><strong>${player}:</strong> ${answer} (${points} pts)</p>`;
+        const { player, answer, points, status } = answers[key];
+        let statusClass = '';
+        if (status === 'correct') {
+          statusClass = 'answer-correct';
+        } else if (status === 'duplicate') {
+          statusClass = 'answer-duplicate';
+        } else {
+          statusClass = 'answer-incorrect';
+        }
+        answersListDiv.innerHTML += `<p class="${statusClass}"><strong>${player}:</strong> ${answer} (${points} pts)</p>`;
       }
     }
   });
@@ -131,8 +152,11 @@ function setupGameListeners() {
     const players = snapshot.val();
     playersListDiv.innerHTML = '<h3>Players:</h3>';
     if (players) {
-      for (let key in players) {
-        const player = players[key];
+      // Convert players object to array
+      let playersArray = Object.values(players);
+      // Sort players by score descending
+      playersArray.sort((a, b) => b.score - a.score);
+      for (let player of playersArray) {
         playersListDiv.innerHTML += `
           <div class="player-item">
             <span class="player-name">${player.name}</span>
@@ -171,26 +195,52 @@ function submitAnswer(player, answer) {
   const correctAnswers = answersData[currentQuestionID];
 
   let points = 0;
+  let answerStatus = 'incorrect'; // 'correct', 'duplicate', or 'incorrect'
+
   if (correctAnswers) {
     // Search for the answer in the array
     const foundAnswer = correctAnswers.find(item => item.answer.toLowerCase() === answer);
     if (foundAnswer) {
-      points = foundAnswer.points;
+      // Check if the answer has already been used
+      database.ref('usedCorrectAnswers/' + currentQuestionID + '/' + answer).once('value').then((snapshot) => {
+        if (snapshot.exists()) {
+          // Answer has already been used
+          points = 0;
+          answerStatus = 'duplicate';
+          // Save the answer along with points and status
+          saveAnswer(player, answer, points, answerStatus);
+        } else {
+          // Answer has not been used yet
+          points = foundAnswer.points;
+          answerStatus = 'correct';
+          // Mark the answer as used
+          database.ref('usedCorrectAnswers/' + currentQuestionID + '/' + answer).set(true);
+          // Update player's score in the database
+          database.ref('players/' + player).once('value').then((snapshot) => {
+            let currentScore = snapshot.val().score || 0;
+            currentScore += points;
+            database.ref('players/' + player).update({ score: currentScore }).then(() => {
+              // Save the answer along with points and status
+              saveAnswer(player, answer, points, answerStatus);
+            });
+          });
+        }
+      });
+    } else {
+      // Answer is incorrect
+      answerStatus = 'incorrect';
+      // Save the answer along with points and status
+      saveAnswer(player, answer, points, answerStatus);
     }
   }
+}
 
-  // Update player's score in the database
-  database.ref('players/' + player).once('value').then((snapshot) => {
-    let currentScore = snapshot.val().score || 0;
-    currentScore += points;
-    database.ref('players/' + player).update({ score: currentScore });
-  });
-
-  // Save the answer along with points
+function saveAnswer(player, answer, points, answerStatus) {
   database.ref('answers').push({
     player: player,
     answer: answer,
-    points: points
+    points: points,
+    status: answerStatus
   });
 }
 
@@ -294,6 +344,8 @@ nextQuestionButton.addEventListener('click', () => {
     database.ref('currentQuestionIndex').set(index);
     // Clear previous answers
     database.ref('answers').remove();
+    // Clear used correct answers
+    database.ref('usedCorrectAnswers').remove();
     // Hide revealed answers
     database.ref('revealedAnswers').set(false);
   });
@@ -319,8 +371,15 @@ function displayRevealedAnswers() {
 // Host: Reset the game
 resetGameButton.addEventListener('click', () => {
   if (confirm('Are you sure you want to reset the game?')) {
-    database.ref().set(null).then(() => {
-      location.reload();
+    // Set gameReset flag
+    database.ref('gameReset').set(true).then(() => {
+      // Clear game data
+      database.ref('questions').remove();
+      database.ref('players').remove();
+      database.ref('answers').remove();
+      database.ref('currentQuestionIndex').remove();
+      database.ref('revealedAnswers').remove();
+      database.ref('usedCorrectAnswers').remove();
     });
   }
 });

@@ -160,8 +160,12 @@ function submitAnswer(player, answer) {
   const correctAnswers = answersData[currentQuestionID];
 
   let points = 0;
-  if (correctAnswers && correctAnswers[answer]) {
-    points = correctAnswers[answer];
+  if (correctAnswers) {
+    // Search for the answer in the array
+    const foundAnswer = correctAnswers.find(item => item.answer.toLowerCase() === answer);
+    if (foundAnswer) {
+      points = foundAnswer.points;
+    }
   }
 
   // Update player's score in the database
@@ -199,7 +203,7 @@ function parseQuestionsFile(fileContent) {
   answersData = {};
   const lines = fileContent.split('\n');
   let currentQuestionText = '';
-  let currentAnswers = {};
+  let currentAnswers = [];
   let questionID = 0;
 
   lines.forEach((line) => {
@@ -210,7 +214,7 @@ function parseQuestionsFile(fileContent) {
         questions.push({ id: questionID.toString(), text: currentQuestionText });
         answersData[questionID.toString()] = currentAnswers;
         currentQuestionText = '';
-        currentAnswers = {};
+        currentAnswers = [];
         questionID++;
       }
     } else if (/^\d+\.\s+/.test(line)) {
@@ -219,8 +223,7 @@ function parseQuestionsFile(fileContent) {
         // Save previous question and answers before starting a new one
         questions.push({ id: questionID.toString(), text: currentQuestionText });
         answersData[questionID.toString()] = currentAnswers;
-        currentQuestionText = '';
-        currentAnswers = {};
+        currentAnswers = [];
         questionID++;
       }
       // Extract the question text
@@ -229,9 +232,9 @@ function parseQuestionsFile(fileContent) {
       // Line is an answer with points in the format "Answer (X points)"
       const match = line.match(/^(.+)\((\d+)\s*points?\)$/i);
       if (match) {
-        const answerText = match[1].trim().toLowerCase();
+        const answerText = match[1].trim();
         const popularity = parseInt(match[2]);
-        currentAnswers[answerText] = popularity;
+        currentAnswers.push({ answer: answerText, points: popularity });
       }
     }
   });
@@ -295,8 +298,9 @@ function displayRevealedAnswers() {
   revealedAnswersDiv.style.display = 'block';
   revealedAnswersDiv.innerHTML = '<h3>Correct Answers:</h3>';
   const correctAnswers = answersData[currentQuestionID];
-  for (let answer in correctAnswers) {
-    const points = correctAnswers[answer];
+  for (let i = 0; i < correctAnswers.length; i++) {
+    const answer = correctAnswers[i].answer;
+    const points = correctAnswers[i].points;
     revealedAnswersDiv.innerHTML += `<p>${answer} (${points} pts)</p>`;
   }
 }
@@ -309,3 +313,4 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
+

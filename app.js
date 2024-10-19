@@ -21,10 +21,10 @@ const revealedAnswersDiv = document.getElementById('revealed-answers');
 
 let playerName = '';
 let isHost = false;
-let playerScores = {};
 let questions = [];
 let answersData = {};
 let currentQuestion = '';
+let currentQuestionID = '';
 let revealedAnswers = false;
 
 // Handle player joining
@@ -62,48 +62,39 @@ function addPlayer(name) {
 function setupGameListeners() {
   console.log(`${playerName} is setting up game listeners`);
 
-  // Listen for questions data
-  database.ref('questions').on('value', (snapshot) => {
+  // Load questions from the database
+  database.ref('questions').once('value').then((snapshot) => {
     const data = snapshot.val();
     if (data) {
       questions = data.questions;
       answersData = data.answersData;
       console.log(`${playerName} loaded questions`);
 
-      // Now that questions are loaded, check if currentQuestionIndex exists
-      database.ref('currentQuestionIndex').once('value').then((snapshot) => {
+      // Now that questions are loaded, set up the currentQuestionIndex listener
+      database.ref('currentQuestionIndex').on('value', (snapshot) => {
         const index = snapshot.val();
+        console.log(`${playerName} received currentQuestionIndex: ${index}`);
         if (index !== null && questions.length > 0) {
-          currentQuestion = questions[index];
+          currentQuestionID = questions[index].id;
+          currentQuestion = questions[index].text;
           loadQuestion();
         } else {
           questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
         }
       });
-
     } else {
       console.log(`${playerName}: No questions found in database`);
       questionDiv.innerHTML = `<h2>No questions available.</h2>`;
     }
-  });
-
-  // Listen for changes to currentQuestionIndex
-  database.ref('currentQuestionIndex').on('value', (snapshot) => {
-    const index = snapshot.val();
-    console.log(`${playerName} received currentQuestionIndex: ${index}`);
-    if (index !== null && questions.length > 0) {
-      currentQuestion = questions[index];
-      loadQuestion();
-    } else {
-      questionDiv.innerHTML = `<h2>Waiting for the next question...</h2>`;
-    }
+  }).catch((error) => {
+    console.error(`${playerName}: Error loading questions:`, error);
   });
 
   // Listen for reveal answers event
   database.ref('revealedAnswers').on('value', (snapshot) => {
     revealedAnswers = snapshot.val();
     console.log(`${playerName} received revealedAnswers: ${revealedAnswers}`);
-    if (revealedAnswers && currentQuestion) {
+    if (revealedAnswers && currentQuestionID) {
       displayRevealedAnswers();
     } else {
       revealedAnswersDiv.style.display = 'none';
@@ -166,7 +157,7 @@ submitAnswerButton.addEventListener('click', () => {
 });
 
 function submitAnswer(player, answer) {
-  const correctAnswers = answersData[currentQuestion];
+  const correctAnswers = answersData[currentQuestionID];
 
   let points = 0;
   if (correctAnswers && correctAnswers[answer]) {
@@ -209,23 +200,27 @@ function parseQuestionsFile(fileContent) {
   const lines = fileContent.split('\n');
   let currentQuestionText = '';
   let currentAnswers = {};
+  let questionID = 0;
+
   lines.forEach((line) => {
     line = line.trim();
     if (line === '') {
       // Empty line indicates end of answers for a question
       if (currentQuestionText) {
-        questions.push(currentQuestionText);
-        answersData[currentQuestionText] = currentAnswers;
+        questions.push({ id: questionID.toString(), text: currentQuestionText });
+        answersData[questionID.toString()] = currentAnswers;
         currentQuestionText = '';
         currentAnswers = {};
+        questionID++;
       }
     } else if (/^\d+\.\s+/.test(line)) {
       // Line starts with a number and a dot (e.g., "111. ")
       if (currentQuestionText) {
         // Save previous question and answers before starting a new one
-        questions.push(currentQuestionText);
-        answersData[currentQuestionText] = currentAnswers;
+        questions.push({ id: questionID.toString(), text: currentQuestionText });
+        answersData[questionID.toString()] = currentAnswers;
         currentAnswers = {};
+        questionID++;
       }
       // Extract the question text
       currentQuestionText = line.replace(/^\d+\.\s+/, '').trim();
@@ -241,8 +236,8 @@ function parseQuestionsFile(fileContent) {
   });
   // Save the last question and answers if file doesn't end with an empty line
   if (currentQuestionText) {
-    questions.push(currentQuestionText);
-    answersData[currentQuestionText] = currentAnswers;
+    questions.push({ id: questionID.toString(), text: currentQuestionText });
+    answersData[questionID.toString()] = currentAnswers;
   }
   // Randomize question order
   shuffleArray(questions);
@@ -255,6 +250,9 @@ function parseQuestionsFile(fileContent) {
     // Reset current question index to -1 to start from the first question when "Next Question" is clicked
     database.ref('currentQuestionIndex').set(-1);
     alert('Questions loaded successfully!');
+  }).catch((error) => {
+    console.error('Error saving questions:', error);
+    alert('Failed to save questions. Please check console for errors.');
   });
 }
 
@@ -292,7 +290,7 @@ revealAnswersButton.addEventListener('click', () => {
 function displayRevealedAnswers() {
   revealedAnswersDiv.style.display = 'block';
   revealedAnswersDiv.innerHTML = '<h3>Correct Answers:</h3>';
-  const correctAnswers = answersData[currentQuestion];
+  const correctAnswers = answersData[currentQuestionID];
   for (let answer in correctAnswers) {
     const points = correctAnswers[answer];
     revealedAnswersDiv.innerHTML += `<p>${answer} (${points} pts)</p>`;
@@ -307,5 +305,6 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
+
 
 

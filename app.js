@@ -218,7 +218,7 @@ function parseQuestionsFile(fileContent) {
         questionID++;
       }
     } else if (/^\d+\.\s+/.test(line)) {
-      // Line starts with a number and a dot (e.g., "111. ")
+      // Line starts with a number and a dot (e.g., "1. ")
       if (currentQuestionText) {
         // Save previous question and answers before starting a new one
         questions.push({ id: questionID.toString(), text: currentQuestionText });
@@ -246,7 +246,7 @@ function parseQuestionsFile(fileContent) {
   // Randomize question order
   shuffleArray(questions);
 
-  // **Add this line to log the answersData before saving**
+  // Log the answersData before saving
   console.log('AnswersData before saving:', answersData);
 
   // Save questions and answers to the database
@@ -313,4 +313,5 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
+
 

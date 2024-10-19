@@ -219,6 +219,7 @@ function parseQuestionsFile(fileContent) {
         // Save previous question and answers before starting a new one
         questions.push({ id: questionID.toString(), text: currentQuestionText });
         answersData[questionID.toString()] = currentAnswers;
+        currentQuestionText = '';
         currentAnswers = {};
         questionID++;
       }
@@ -241,6 +242,9 @@ function parseQuestionsFile(fileContent) {
   }
   // Randomize question order
   shuffleArray(questions);
+
+  // **Add this line to log the answersData before saving**
+  console.log('AnswersData before saving:', answersData);
 
   // Save questions and answers to the database
   database.ref('questions').set({
@@ -305,6 +309,3 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
-
-
-

@@ -7,7 +7,6 @@ const joinGameButton = document.getElementById('join-game');
 const playerSetupDiv = document.getElementById('player-setup');
 const gamePlayDiv = document.getElementById('game-play');
 const playersListDiv = document.getElementById('players-list');
-const hostControlsDiv = document.getElementById('host-controls');
 const questionFileInput = document.getElementById('question-file-input');
 const loadQuestionsButton = document.getElementById('load-questions');
 const questionDiv = document.getElementById('question');
@@ -29,6 +28,7 @@ let currentQuestion = '';
 let currentQuestionID = '';
 let revealedAnswers = false;
 let questionsLoaded = false;
+let lastGameReset = null; // For tracking game resets
 
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
@@ -68,8 +68,9 @@ function setupGameListeners() {
 
   // Listen for game reset
   database.ref('gameReset').on('value', (snapshot) => {
-    const reset = snapshot.val();
-    if (reset) {
+    const resetTimestamp = snapshot.val();
+    if (resetTimestamp && resetTimestamp !== lastGameReset) {
+      lastGameReset = resetTimestamp;
       // Reset local state and go back to player setup screen
       alert('The game has been reset by the host.');
       location.reload();
@@ -371,8 +372,9 @@ function displayRevealedAnswers() {
 // Host: Reset the game
 resetGameButton.addEventListener('click', () => {
   if (confirm('Are you sure you want to reset the game?')) {
+    const resetTimestamp = Date.now();
     // Set gameReset flag
-    database.ref('gameReset').set(true).then(() => {
+    database.ref('gameReset').set(resetTimestamp).then(() => {
       // Clear game data
       database.ref('questions').remove();
       database.ref('players').remove();
@@ -383,5 +385,6 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
+
 
 

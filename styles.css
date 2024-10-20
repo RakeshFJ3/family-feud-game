@@ -7,15 +7,22 @@ body {
   
   #player-setup, #game-play {
     text-align: center;
-    margin-top: 50px;
+    margin-top: 20px;
   }
   
   #answer-input {
-    width: 200px;
+    width: 300px;
+    font-size: 16px;
+    padding: 10px;
   }
   
   #answers-list, #revealed-answers {
     margin-top: 20px;
+  }
+  
+  button {
+    font-size: 16px;
+    padding: 10px 20px;
   }
   
   /* Top Bar Styles */
@@ -46,13 +53,17 @@ body {
     margin-right: 20px;
   }
   
+  #secondary-host-controls button {
+    margin-left: 5px;
+  }
+  
   /* Main Host Controls */
   #main-host-controls {
     margin-top: 20px;
   }
   
   #main-host-controls button {
-    margin: 5px;
+    margin: 10px;
   }
   
   /* Question Styles */
@@ -62,26 +73,34 @@ body {
     font-weight: bold;
   }
   
+  /* Game Title */
+  #game-title {
+    color: maroon;
+    text-align: center;
+    margin-top: 20px;
+  }
+  
   /* Answer Styles */
   .answer-correct {
     background-color: lightgreen;
+    border-radius: 5px;
   }
   
   .answer-duplicate {
     background-color: lightcoral;
+    border-radius: 5px;
   }
   
   .answer-incorrect {
     background-color: transparent;
   }
   
-  /* Answer List Styles */
   #answers-list p {
     padding: 5px;
-  }
-  
-  #answers-list h3 {
-    margin-top: 20px;
+    margin: 5px auto;
+    max-width: 500px;
+    text-align: left;
+    border-radius: 5px;
   }
   
   /* Revealed Answers Styles */
@@ -89,8 +108,29 @@ body {
     margin-top: 20px;
   }
   
+  #revealed-answers p {
+    background-color: yellow;
+    padding: 5px;
+    margin: 5px auto;
+    max-width: 500px;
+    text-align: left;
+    border-radius: 5px;
+  }
+  
   /* Answer Section Styles */
   #answer-section {
     margin-top: 20px;
+  }
+  
+  #answer-section input {
+    font-size: 16px;
+    padding: 10px;
+    width: 300px;
+  }
+  
+  #answer-section button {
+    font-size: 16px;
+    padding: 10px 20px;
+    margin-left: 10px;
   }
   

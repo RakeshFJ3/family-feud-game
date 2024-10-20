@@ -28,7 +28,9 @@ let currentQuestion = '';
 let currentQuestionID = '';
 let revealedAnswers = false;
 let questionsLoaded = false;
-let lastGameReset = null; // For tracking game resets
+
+// Initialize lastGameReset from localStorage
+let lastGameReset = localStorage.getItem('lastGameReset');
 
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
@@ -71,6 +73,7 @@ function setupGameListeners() {
     const resetTimestamp = snapshot.val();
     if (resetTimestamp && resetTimestamp !== lastGameReset) {
       lastGameReset = resetTimestamp;
+      localStorage.setItem('lastGameReset', lastGameReset);
       // Reset local state and go back to player setup screen
       alert('The game has been reset by the host.');
       location.reload();
@@ -385,6 +388,3 @@ resetGameButton.addEventListener('click', () => {
     });
   }
 });
-
-
-

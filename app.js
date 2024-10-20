@@ -29,9 +29,6 @@ let currentQuestionID = '';
 let revealedAnswers = false;
 let questionsLoaded = false;
 
-// Initialize lastGameReset from localStorage
-let lastGameReset = localStorage.getItem('lastGameReset');
-
 // Handle player joining
 joinGameButton.addEventListener('click', () => {
   playerName = playerNameInput.value.trim();
@@ -71,11 +68,11 @@ function setupGameListeners() {
   // Listen for game reset
   database.ref('gameReset').on('value', (snapshot) => {
     const resetTimestamp = snapshot.val();
-    if (resetTimestamp && resetTimestamp !== lastGameReset) {
-      lastGameReset = resetTimestamp;
-      localStorage.setItem('lastGameReset', lastGameReset);
+    if (resetTimestamp) {
       // Reset local state and go back to player setup screen
       alert('The game has been reset by the host.');
+      // Remove the gameReset flag
+      database.ref('gameReset').remove();
       location.reload();
     }
   });
@@ -385,6 +382,11 @@ resetGameButton.addEventListener('click', () => {
       database.ref('currentQuestionIndex').remove();
       database.ref('revealedAnswers').remove();
       database.ref('usedCorrectAnswers').remove();
+      // After a short delay, remove the gameReset flag
+      setTimeout(() => {
+        database.ref('gameReset').remove();
+      }, 3000); // 3 seconds delay
     });
   }
 });
+
